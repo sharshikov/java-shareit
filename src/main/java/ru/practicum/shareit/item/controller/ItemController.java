@@ -2,7 +2,6 @@ package ru.practicum.shareit.item.controller;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.groups.Default;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,8 +25,11 @@ import java.util.List;
 @RestController
 @RequestMapping("/items")
 public class ItemController {
-    @Autowired
     private ItemService itemService;
+
+    public ItemController(ItemService itemService) {
+        this.itemService = itemService;
+    }
 
     @PostMapping
     public ResponseEntity<ItemDto> addItem(@RequestHeader("X-Sharer-User-Id") @Min(1) Integer userId, @Validated({PostValidationGroup.class, Default.class}) @RequestBody ItemDto itemDto) {

@@ -11,9 +11,8 @@ import ru.practicum.shareit.user.storage.UserStorage;
 import java.util.List;
 
 @Service
-public class UserService {
+public class UserService implements IUserService {
     private final UserStorage userStorage;
-    private static int id = 1;
 
     public UserService(UserStorage userStorage) {
         this.userStorage = userStorage;
@@ -23,15 +22,12 @@ public class UserService {
         if (userStorage.getUsers().stream().anyMatch(x -> x.getEmail().equals(userDto.getEmail()))) {
             throw new DuplicateDataException("Пользователь с таким email уже существует");
         }
-        userDto.setId(id);
         User user = UserMapper.INSTANCE.toUser(userDto);
-        userStorage.addUser(user);
-        id++;
-        return userDto;
+        return UserMapper.INSTANCE.toUserDto(userStorage.addUser(user));
     }
 
     public List<UserDto> getUsers() {
-        return UserMapper.INSTANCE.tooUsersDto(userStorage.getUsers());
+        return UserMapper.INSTANCE.toUserDtos(userStorage.getUsers());
     }
 
     public UserDto updateUser(Integer userId, UserDto userDto) {

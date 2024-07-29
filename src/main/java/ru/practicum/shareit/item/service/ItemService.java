@@ -1,6 +1,5 @@
 package ru.practicum.shareit.item.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.NotFoundDataException;
 import ru.practicum.shareit.item.dto.ItemDto;
@@ -14,20 +13,20 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class ItemService {
-    @Autowired
-    private ItemStorage itemStorage;
-    @Autowired
-    private UserService userService;
-    private static int id = 1;
+public class ItemService implements IItemService {
+    private final ItemStorage itemStorage;
+    private final UserService userService;
+
+    public ItemService(ItemStorage itemStorage, UserService userService) {
+        this.userService = userService;
+        this.itemStorage = itemStorage;
+    }
 
     public ItemDto addItem(Integer userId, ItemDto itemDto) {
         userService.getUser(userId);
         Item item = ItemMapper.INSTANCE.toItem(itemDto);
-        item.setId(id++);
         item.setOwner(userId);
-        itemStorage.addItem(item);
-        return ItemMapper.INSTANCE.toItemDto(item);
+        return ItemMapper.INSTANCE.toItemDto(itemStorage.addItem(item));
     }
 
     public ItemDto updateItem(Integer userId, Integer itemId, ItemDto itemDto) {

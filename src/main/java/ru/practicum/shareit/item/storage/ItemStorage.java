@@ -9,11 +9,14 @@ import java.util.List;
 import java.util.Map;
 
 @Repository
-public class ItemStorage {
+public class ItemStorage implements IItemStorage {
     private final Map<Integer, Item> items = new HashMap<>();
+    private static int id = 1;
 
     public Item addItem(Item item) {
-        return items.put(item.getId(), item);
+        item.setId(id++);
+        items.put(item.getId(), item);
+        return item;
     }
 
     public List<Item> getItems() {

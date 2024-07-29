@@ -9,10 +9,12 @@ import java.util.List;
 import java.util.Map;
 
 @Repository
-public class UserStorage {
+public class UserStorage implements IUserStorage {
     private final Map<Integer, User> users = new HashMap<>();
+    private static int id = 1;
 
     public User addUser(User user) {
+        user.setId(id++);
         users.put(user.getId(), user);
         return user;
     }
