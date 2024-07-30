@@ -9,7 +9,7 @@ import ru.practicum.shareit.PostValidationGroup;
 @Getter
 @Setter
 public class UserDto {
-    private Integer id;
+    private String id;
     @NotBlank(groups = PostValidationGroup.class)
     private String name;
     @NotBlank(groups = PostValidationGroup.class)
