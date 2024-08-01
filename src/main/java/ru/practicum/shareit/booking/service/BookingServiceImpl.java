@@ -34,15 +34,12 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public BookingOutDto createBooking(Integer userId, BookingInDto bookingInDto) {
-        // Проверка на пересечение бронирований
         List<Booking> overlappingBookings = bookingRepository.findOverlappingBookings(
                 bookingInDto.getItemId(), bookingInDto.getStart(), bookingInDto.getEnd());
         if (!overlappingBookings.isEmpty()) {
             throw new DuplicateDataException("Item is already booked for the requested time period.");
         }
-        Booking booking = new Booking();
-        booking.setStart(bookingInDto.getStart());
-        booking.setEnd(bookingInDto.getEnd());
+        Booking booking = BookingMapper.INSTANCE.toEntity(bookingInDto);
         booking.setItem(itemRepository.findById(bookingInDto.getItemId())
                 .orElseThrow(() -> new NotFoundDataException("Item not found")));
         itemRepository.findById(bookingInDto.getItemId()).filter(Item::getAvailable).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Предмет не доступен"));
@@ -79,7 +76,7 @@ public class BookingServiceImpl implements BookingService {
         List<Booking> bookings;
         switch (state) {
             case "CURRENT":
-                bookings = bookingRepository.findByBookerIdAndEndIsBefore(userId, LocalDateTime.now())
+                bookings = bookingRepository.findByBookerIdAndStartIsBeforeAndEndIsAfter(userId, LocalDateTime.now(), LocalDateTime.now())
                         .stream()
                         .filter(booking -> booking.getStatus() == StatusBooking.APPROVED)
                         .collect(Collectors.toList());
@@ -91,7 +88,7 @@ public class BookingServiceImpl implements BookingService {
                         .collect(Collectors.toList());
                 break;
             case "FUTURE":
-                bookings = bookingRepository.findByBookerIdAndEndIsAfter(userId, LocalDateTime.now())
+                bookings = bookingRepository.findByBookerIdAndStartIsAfter(userId, LocalDateTime.now())
                         .stream()
                         .filter(booking -> booking.getStatus() == StatusBooking.APPROVED)
                         .collect(Collectors.toList());
@@ -116,7 +113,7 @@ public class BookingServiceImpl implements BookingService {
         List<Booking> bookings;
         switch (state) {
             case "CURRENT":
-                bookings = bookingRepository.findByItemOwnerIdAndStartIsBefore(ownerId, LocalDateTime.now())
+                bookings = bookingRepository.findByItemOwnerIdAndStartIsBeforeAndEndIsAfter(ownerId, LocalDateTime.now(), LocalDateTime.now())
                         .stream()
                         .filter(booking -> booking.getStatus() == StatusBooking.APPROVED)
                         .collect(Collectors.toList());

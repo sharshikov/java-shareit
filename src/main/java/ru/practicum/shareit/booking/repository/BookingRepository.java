@@ -9,15 +9,17 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface BookingRepository extends JpaRepository<Booking, Integer> {
+    List<Booking> findByBookerIdAndStartIsBeforeAndEndIsAfter(Integer bookerId, LocalDateTime start, LocalDateTime end);
+
     List<Booking> findByBookerIdAndEndIsBefore(Integer bookerId, LocalDateTime end);
 
-    List<Booking> findByBookerIdAndEndIsAfter(Integer bookerId, LocalDateTime end);
+    List<Booking> findByBookerIdAndStartIsAfter(Integer bookerId, LocalDateTime end);
 
     List<Booking> findByBookerIdAndStatus(Integer bookerId, StatusBooking status);
 
     List<Booking> findByBookerId(Integer bookerId);
 
-    List<Booking> findByItemOwnerIdAndStartIsBefore(Integer ownerId, LocalDateTime start);
+    List<Booking> findByItemOwnerIdAndStartIsBeforeAndEndIsAfter(Integer ownerId, LocalDateTime start, LocalDateTime end);
 
     List<Booking> findByItemOwnerIdAndEndIsBefore(Integer ownerId, LocalDateTime end);
 
