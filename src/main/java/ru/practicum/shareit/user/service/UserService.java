@@ -1,62 +1,17 @@
 package ru.practicum.shareit.user.service;
 
-import org.springframework.stereotype.Service;
-import ru.practicum.shareit.exception.DuplicateDataException;
-import ru.practicum.shareit.exception.NotFoundDataException;
 import ru.practicum.shareit.user.dto.UserDto;
-import ru.practicum.shareit.user.mapper.UserMapper;
-import ru.practicum.shareit.user.model.User;
-import ru.practicum.shareit.user.storage.UserStorage;
 
 import java.util.List;
 
-@Service
-public class UserService implements IUserService {
-    private final UserStorage userStorage;
+public interface UserService {
+    UserDto createUser(UserDto userDto);
 
-    public UserService(UserStorage userStorage) {
-        this.userStorage = userStorage;
-    }
+    UserDto getUserById(Integer id);
 
-    public UserDto addUser(UserDto userDto) {
-        if (userStorage.getUsers().stream().anyMatch(x -> x.getEmail().equals(userDto.getEmail()))) {
-            throw new DuplicateDataException("Пользователь с таким email уже существует");
-        }
-        User user = UserMapper.INSTANCE.toUser(userDto);
-        return UserMapper.INSTANCE.toUserDto(userStorage.addUser(user));
-    }
+    List<UserDto> getAllUsers();
 
-    public List<UserDto> getUsers() {
-        return UserMapper.INSTANCE.toUserDtos(userStorage.getUsers());
-    }
+    UserDto updateUser(Integer id, UserDto userDto);
 
-    public UserDto updateUser(Integer userId, UserDto userDto) {
-        User user = userStorage.getUsers().stream()
-                .filter(u -> u.getId().equals(userId))
-                .findFirst()
-                .orElseThrow(() -> new NotFoundDataException("Пользователь с таким id не найден"));
-        if (userDto.getEmail() != null) {
-            if (userStorage.getUsers().stream()
-                    .anyMatch(u -> u.getEmail().equals(userDto.getEmail()) && !u.getId().equals(userId))) {
-                throw new DuplicateDataException("Пользователь с таким email уже существует");
-            }
-            user.setEmail(userDto.getEmail());
-        }
-        if (userDto.getName() != null) {
-            user.setName(userDto.getName());
-        }
-        return UserMapper.INSTANCE.toUserDto(user);
-    }
-
-    public UserDto getUser(Integer id) {
-        return userStorage.getUsers().stream()
-                .filter(u -> u.getId().equals(id))
-                .map(UserMapper.INSTANCE::toUserDto)
-                .findFirst()
-                .orElseThrow(() -> new NotFoundDataException("Пользователь с таким id не найден"));
-    }
-
-    public void deleteUser(Integer id) {
-        userStorage.deleteUser(id);
-    }
+    void deleteUser(Integer id);
 }

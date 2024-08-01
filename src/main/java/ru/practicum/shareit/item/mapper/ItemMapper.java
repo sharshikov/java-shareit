@@ -1,6 +1,7 @@
 package ru.practicum.shareit.item.mapper;
 
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.model.Item;
@@ -9,7 +10,11 @@ import ru.practicum.shareit.item.model.Item;
 public interface ItemMapper {
     ItemMapper INSTANCE = Mappers.getMapper(ItemMapper.class);
 
-    Item toItem(ItemDto itemDto);
+    @Mapping(source = "owner.id", target = "ownerId")
+    @Mapping(source = "request", target = "requestId")
+    ItemDto toDto(Item item);
 
-    ItemDto toItemDto(Item item);
+    @Mapping(source = "ownerId", target = "owner.id")
+    @Mapping(source = "requestId", target = "request")
+    Item toEntity(ItemDto itemDto);
 }

@@ -1,9 +1,9 @@
 package ru.practicum.shareit.item.controller;
 
-import jakarta.validation.constraints.Min;
 import jakarta.validation.groups.Default;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,46 +14,65 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.practicum.shareit.PostValidationGroup;
+import ru.practicum.shareit.comment.dto.CommentDto;
+import ru.practicum.shareit.comment.service.CommentService;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.service.ItemService;
 
 import java.util.List;
 
-/**
- * TODO Sprint add-controllers.
- */
 @RestController
 @RequestMapping("/items")
 public class ItemController {
-    private ItemService itemService;
 
-    public ItemController(ItemService itemService) {
+    private final ItemService itemService;
+    private final CommentService commentService;
+
+    public ItemController(ItemService itemService, CommentService commentService) {
         this.itemService = itemService;
+        this.commentService = commentService;
     }
 
     @PostMapping
-    public ResponseEntity<ItemDto> addItem(@RequestHeader("X-Sharer-User-Id") @Min(1) Integer userId, @Validated({PostValidationGroup.class, Default.class}) @RequestBody ItemDto itemDto) {
-        return ResponseEntity.ok(itemService.addItem(userId, itemDto));
+    public ResponseEntity<ItemDto> createItem(@Validated({PostValidationGroup.class, Default.class}) @RequestBody ItemDto itemDto, @RequestHeader("X-Sharer-User-Id") Integer ownerId) {
+        return ResponseEntity.ok(itemService.createItem(itemDto, ownerId));
     }
 
-    @PatchMapping("/{itemId}")
-    public ResponseEntity<ItemDto> updateItem(@RequestHeader("X-Sharer-User-Id") @Min(1) Integer userId,
-                                              @PathVariable @Min(1) Integer itemId, @RequestBody ItemDto itemDto) {
-        return ResponseEntity.ok(itemService.updateItem(userId, itemId, itemDto));
-    }
-
-    @GetMapping("/{itemId}")
-    public ResponseEntity<ItemDto> getItemById(@PathVariable @Min(1) Integer itemId) {
-        return ResponseEntity.ok(itemService.getItemById(itemId));
+    @GetMapping("/{id}")
+    public ResponseEntity<ItemDto> getItemById(@PathVariable Integer id) {
+        return ResponseEntity.ok(itemService.getItemById(id));
     }
 
     @GetMapping
-    public ResponseEntity<List<ItemDto>> getItemsByUser(@RequestHeader("X-Sharer-User-Id") @Min(1) Integer userId) {
-        return ResponseEntity.ok(itemService.getItemsByUser(userId));
+    public ResponseEntity<List<ItemDto>> getAllItemsByUserId(@RequestHeader("X-Sharer-User-Id") Integer userId) {
+        return ResponseEntity.ok(itemService.getAllItemsByUserId(userId));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<ItemDto> updateItem(@RequestHeader("X-Sharer-User-Id") Integer ownerId, @PathVariable Integer id, @RequestBody ItemDto itemDto) {
+        return ResponseEntity.ok(itemService.updateItem(ownerId, id, itemDto));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteItem(@PathVariable Integer id) {
+        itemService.deleteItem(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/search")
     public ResponseEntity<List<ItemDto>> searchItems(@RequestParam String text) {
         return ResponseEntity.ok(itemService.searchItems(text));
+    }
+
+    @PostMapping("/{itemId}/comment")
+    public ResponseEntity<CommentDto> createComment(@RequestBody CommentDto commentDto,
+                                                    @PathVariable Integer itemId,
+                                                    @RequestHeader("X-Sharer-User-Id") Integer authorId) {
+        return ResponseEntity.ok(commentService.createComment(commentDto, itemId, authorId));
+    }
+
+    @GetMapping("/{itemId}/comments")
+    public ResponseEntity<List<CommentDto>> getCommentsByItemId(@PathVariable Integer itemId) {
+        return ResponseEntity.ok(commentService.getCommentsByItemId(itemId));
     }
 }
