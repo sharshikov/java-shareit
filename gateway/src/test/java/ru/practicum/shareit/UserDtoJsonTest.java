@@ -57,7 +57,7 @@ public class UserDtoJsonTest {
 
         // Проверка, что валидация не прошла из-за некорректного email
         assertThat(violations).hasSize(1);
-        assertThat(violations.iterator().next().getMessage()).contains("должно иметь формат адреса электронной почты");
+        assertThat(violations.iterator().next().getMessage()).contains("must be a well-formed email address");
     }
 
     @Test
