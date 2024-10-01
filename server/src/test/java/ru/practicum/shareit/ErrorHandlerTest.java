@@ -1,7 +1,6 @@
 package ru.practicum.shareit;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import ru.practicum.shareit.exception.DuplicateDataException;
 import ru.practicum.shareit.exception.NotFoundDataException;
 import ru.practicum.shareit.handler.ErrorHandler;
