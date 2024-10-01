@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.repository.BookingRepository;
 import ru.practicum.shareit.comment.dto.CommentDto;
@@ -70,7 +71,7 @@ public class CommentServiceImplTest {
         booking.setBooker(testUser);
         booking.setStart(LocalDateTime.now().minusDays(1));
         booking.setEnd(LocalDateTime.now().plusDays(1));
-        booking.setStatus(StatusBooking.APPROVED);  // Установите статус бронирования
+        booking.setStatus(StatusBooking.APPROVED);
         bookingRepository.save(booking);
 
         // Создание DTO для тестового комментария
@@ -78,36 +79,48 @@ public class CommentServiceImplTest {
         testCommentDto.setText("Test comment");
     }
 
+    // Тест на успешное создание комментария
     @Test
     void whenCreateComment_thenCommentIsCreated() {
-        // Создание комментария через сервис
         CommentDto savedComment = commentService.createComment(testCommentDto, testItem.getId(), testUser.getId());
 
-        // Проверка, что комментарий был успешно создан
         assertNotNull(savedComment.getId());
         assertEquals(testCommentDto.getText(), savedComment.getText());
         assertEquals(testUser.getName(), savedComment.getAuthorName());
     }
 
+    // Тест на случай несуществующего предмета
     @Test
     void whenCreateComment_withInvalidItemId_thenThrowsNotFoundDataException() {
-        // Проверка, что возникает исключение при неверном ID предмета
         assertThrows(NotFoundDataException.class, () -> {
             commentService.createComment(testCommentDto, 999, testUser.getId());
         });
     }
 
+    // Тест на случай несуществующего пользователя
     @Test
     void whenCreateComment_withInvalidUserId_thenThrowsNotFoundDataException() {
-        // Проверка, что возникает исключение при неверном ID пользователя
         assertThrows(NotFoundDataException.class, () -> {
             commentService.createComment(testCommentDto, testItem.getId(), 999);
         });
     }
 
+    // Тест на попытку создать комментарий без бронирования
+    @Test
+    void whenCreateCommentWithoutBooking_thenThrowsResponseStatusException() {
+        User anotherUser = new User();
+        anotherUser.setName("Another User");
+        anotherUser.setEmail("anotheruser@example.com");
+        userRepository.save(anotherUser);
+
+        assertThrows(ResponseStatusException.class, () -> {
+            commentService.createComment(testCommentDto, testItem.getId(), anotherUser.getId());
+        });
+    }
+
+    // Тест на получение списка комментариев по предмету
     @Test
     void whenGetCommentsByItemId_thenCommentsAreReturned() {
-        // Создание и сохранение комментария
         Comment comment = new Comment();
         comment.setText("Test comment");
         comment.setItem(testItem);
@@ -115,12 +128,17 @@ public class CommentServiceImplTest {
         comment.setCreated(LocalDateTime.now());
         commentRepository.save(comment);
 
-        // Получение комментариев через сервис
         List<CommentDto> comments = commentService.getCommentsByItemId(testItem.getId());
 
-        // Проверка, что список содержит созданные комментарии
         assertEquals(1, comments.size());
         assertEquals(comment.getText(), comments.get(0).getText());
         assertEquals(testUser.getName(), comments.get(0).getAuthorName());
+    }
+
+    // Тест на отсутствие комментариев для предмета
+    @Test
+    void whenGetCommentsByItemId_withNoComments_thenEmptyListReturned() {
+        List<CommentDto> comments = commentService.getCommentsByItemId(testItem.getId());
+        assertTrue(comments.isEmpty());
     }
 }

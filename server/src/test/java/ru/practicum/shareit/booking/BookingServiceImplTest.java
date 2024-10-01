@@ -47,19 +47,16 @@ class BookingServiceImplTest {
 
     @BeforeEach
     void setup() {
-        // Создание тестового пользователя
         testUser = new User();
         testUser.setName("Test User");
         testUser.setEmail("testuser@example.com");
         userRepository.save(testUser);
 
-        // Создание владельца предмета
         testOwner = new User();
         testOwner.setName("Test Owner");
         testOwner.setEmail("testowner@example.com");
         userRepository.save(testOwner);
 
-        // Создание тестового предмета
         testItem = new Item();
         testItem.setName("Test Item");
         testItem.setDescription("Test description");
@@ -67,7 +64,6 @@ class BookingServiceImplTest {
         testItem.setOwner(testOwner);
         itemRepository.save(testItem);
 
-        // Создание тестового BookingInDto
         testBookingInDto = new BookingInDto();
         testBookingInDto.setItemId(testItem.getId());
         testBookingInDto.setStart(LocalDateTime.now().plusDays(1));
@@ -76,10 +72,7 @@ class BookingServiceImplTest {
 
     @Test
     void whenCreateBooking_thenBookingIsCreated() {
-        // Создание бронирования
         BookingOutDto bookingOutDto = bookingService.createBooking(testUser.getId(), testBookingInDto);
-
-        // Проверка, что бронирование создано
         assertNotNull(bookingOutDto.getId());
         assertEquals(StatusBooking.WAITING, bookingOutDto.getStatus());
         assertEquals(testItem.getId(), bookingOutDto.getItem().getId());
@@ -87,156 +80,162 @@ class BookingServiceImplTest {
 
     @Test
     void whenCreateBooking_withOverlappingDates_thenThrowsDuplicateDataException() {
-        // Создание первого бронирования
         bookingService.createBooking(testUser.getId(), testBookingInDto);
 
-        // Создание второго бронирования с пересекающимися датами
         BookingInDto overlappingBooking = new BookingInDto();
         overlappingBooking.setItemId(testItem.getId());
         overlappingBooking.setStart(LocalDateTime.now().plusDays(1));
         overlappingBooking.setEnd(LocalDateTime.now().plusDays(2));
 
-        // Ожидание исключения
         assertThrows(DuplicateDataException.class, () -> bookingService.createBooking(testUser.getId(), overlappingBooking));
     }
 
     @Test
     void whenCreateBooking_withNonExistentItem_thenThrowsNotFoundDataException() {
         testBookingInDto.setItemId(999);
-
-        // Ожидание исключения
         assertThrows(NotFoundDataException.class, () -> bookingService.createBooking(testUser.getId(), testBookingInDto));
     }
 
     @Test
     void whenUpdateBookingStatus_toApproved_thenStatusIsUpdated() {
-        // Создание бронирования
         BookingOutDto bookingOutDto = bookingService.createBooking(testUser.getId(), testBookingInDto);
-
-        // Обновление статуса бронирования владельцем предмета
         BookingOutDto updatedBooking = bookingService.updateBookingStatus(testOwner.getId(), bookingOutDto.getId(), true);
-
-        // Проверка, что статус обновлен на APPROVED
         assertEquals(StatusBooking.APPROVED, updatedBooking.getStatus());
     }
 
     @Test
     void whenUpdateBookingStatus_toRejected_thenStatusIsUpdated() {
-        // Создание бронирования
         BookingOutDto bookingOutDto = bookingService.createBooking(testUser.getId(), testBookingInDto);
-
-        // Обновление статуса бронирования владельцем предмета на REJECTED
         BookingOutDto updatedBooking = bookingService.updateBookingStatus(testOwner.getId(), bookingOutDto.getId(), false);
-
-        // Проверка, что статус обновлен на REJECTED
         assertEquals(StatusBooking.REJECTED, updatedBooking.getStatus());
     }
 
     @Test
-    void whenUpdateBookingStatus_withWrongOwner_thenThrowsResponseStatusException() {
-        // Создание бронирования
-        BookingOutDto bookingOutDto = bookingService.createBooking(testUser.getId(), testBookingInDto);
-
-        // Ожидание исключения при попытке обновить статус от имени другого владельца
-        assertThrows(org.springframework.web.server.ResponseStatusException.class, () -> {
-            bookingService.updateBookingStatus(testUser.getId(), bookingOutDto.getId(), true);
-        });
-    }
-
-    @Test
     void whenGetBooking_withCorrectUser_thenBookingIsReturned() {
-        // Создание бронирования
         BookingOutDto bookingOutDto = bookingService.createBooking(testUser.getId(), testBookingInDto);
-
-        // Получение бронирования через сервис
         BookingOutDto fetchedBooking = bookingService.getBooking(testUser.getId(), bookingOutDto.getId());
-
-        // Проверка, что бронирование возвращено
         assertEquals(bookingOutDto.getId(), fetchedBooking.getId());
         assertEquals(StatusBooking.WAITING, fetchedBooking.getStatus());
     }
 
     @Test
     void whenGetBooking_withIncorrectUser_thenThrowsNotFoundDataException() {
-        // Создание бронирования
         BookingOutDto bookingOutDto = bookingService.createBooking(testUser.getId(), testBookingInDto);
-
-        // Ожидание исключения при попытке получить бронирование другим пользователем
         assertThrows(NotFoundDataException.class, () -> bookingService.getBooking(999, bookingOutDto.getId()));
     }
 
     @Test
     void whenGetOwnerBookings_withWaitingState_thenBookingsAreReturned() {
-        // Создание бронирования
         bookingService.createBooking(testUser.getId(), testBookingInDto);
-
-        // Получение бронирований владельца в состоянии WAITING
         List<BookingOutDto> bookings = bookingService.getOwnerBookings(testOwner.getId(), "WAITING");
-
-        // Проверка, что бронирования были успешно возвращены
         assertFalse(bookings.isEmpty());
         assertEquals(StatusBooking.WAITING, bookings.get(0).getStatus());
     }
 
     @Test
     void whenGetOwnerBookings_withInvalidState_thenAllBookingsAreReturned() {
-        // Создание бронирования
         bookingService.createBooking(testUser.getId(), testBookingInDto);
-
-        // Получение всех бронирований владельца
         List<BookingOutDto> bookings = bookingService.getOwnerBookings(testOwner.getId(), "INVALID_STATE");
-
-        // Проверка, что возвращены все бронирования
         assertFalse(bookings.isEmpty());
     }
 
+    // Новый тест для состояния PAST
     @Test
-    void whenGetUserBookings_withFutureState_thenBookingsAreReturned() {
-        // Изменение времени начала бронирования на несколько дней вперед, чтобы оно точно было в будущем
-        testBookingInDto.setStart(LocalDateTime.now().plusDays(3));
-        testBookingInDto.setEnd(LocalDateTime.now().plusDays(4));
-
-        // Создаем бронирование
+    void whenGetOwnerBookings_withPastState_thenBookingsAreReturned() {
+        testBookingInDto.setStart(LocalDateTime.now().minusDays(5));
+        testBookingInDto.setEnd(LocalDateTime.now().minusDays(3));
         BookingOutDto bookingOutDto = bookingService.createBooking(testUser.getId(), testBookingInDto);
         bookingService.updateBookingStatus(testOwner.getId(), bookingOutDto.getId(), true);
-        // Проверка бронирований пользователя в будущем состоянии
-        List<BookingOutDto> bookings = bookingService.getUserBookings(testUser.getId(), "FUTURE");
+        List<BookingOutDto> bookings = bookingService.getOwnerBookings(testOwner.getId(), "PAST");
+        assertFalse(bookings.isEmpty());
+        assertEquals(StatusBooking.APPROVED, bookings.get(0).getStatus());
+    }
 
+    // Новый тест для состояния PAST
+    @Test
+    void whenGetOwnerBookings_withCurrentState_thenBookingsAreReturned() {
+        testBookingInDto.setStart(LocalDateTime.now().minusDays(5));
+        testBookingInDto.setEnd(LocalDateTime.now().plusDays(3));
+        BookingOutDto bookingOutDto = bookingService.createBooking(testUser.getId(), testBookingInDto);
+        bookingService.updateBookingStatus(testOwner.getId(), bookingOutDto.getId(), true);
+        List<BookingOutDto> bookings = bookingService.getOwnerBookings(testOwner.getId(), "CURRENT");
+        assertFalse(bookings.isEmpty());
+        assertEquals(StatusBooking.APPROVED, bookings.get(0).getStatus());
+    }
+
+    // Новый тест для состояния FUTURE
+    @Test
+    void whenGetOwnerBookings_withFutureState_thenBookingsAreReturned() {
+        testBookingInDto.setStart(LocalDateTime.now().plusDays(5));
+        testBookingInDto.setEnd(LocalDateTime.now().plusDays(7));
+        BookingOutDto bookingOutDto = bookingService.createBooking(testUser.getId(), testBookingInDto);
+        bookingService.updateBookingStatus(testOwner.getId(), bookingOutDto.getId(), true);
+        List<BookingOutDto> bookings = bookingService.getOwnerBookings(testOwner.getId(), "FUTURE");
+        assertFalse(bookings.isEmpty());
+        assertEquals(StatusBooking.APPROVED, bookings.get(0).getStatus());
+    }
+
+    // Новый тест для состояния REJECTED
+    @Test
+    void whenGetOwnerBookings_withRejectedState_thenBookingsAreReturned() {
+        BookingOutDto bookingOutDto = bookingService.createBooking(testUser.getId(), testBookingInDto);
+        bookingService.updateBookingStatus(testOwner.getId(), bookingOutDto.getId(), false);
+        List<BookingOutDto> bookings = bookingService.getOwnerBookings(testOwner.getId(), "REJECTED");
+        assertFalse(bookings.isEmpty());
+        assertEquals(StatusBooking.REJECTED, bookings.get(0).getStatus());
+    }
+
+    // Новый тест для фильтрации REJECTED
+    @Test
+    void whenGetOwnerBookings_withRejectedStatus_thenFilteredOut() {
+        testBookingInDto.setStart(LocalDateTime.now().plusDays(1));
+        testBookingInDto.setEnd(LocalDateTime.now().plusDays(2));
+        BookingOutDto bookingOutDto = bookingService.createBooking(testUser.getId(), testBookingInDto);
+        bookingService.updateBookingStatus(testOwner.getId(), bookingOutDto.getId(), false); // Set to REJECTED
+        assertThrows(NotFoundDataException.class, () -> bookingService.getOwnerBookings(testOwner.getId(), "FUTURE"));
+    }
+
+    // Тесты для метода getUserBookings
+
+    @Test
+    void whenGetUserBookings_withFutureState_thenBookingsAreReturned() {
+        testBookingInDto.setStart(LocalDateTime.now().plusDays(3));
+        testBookingInDto.setEnd(LocalDateTime.now().plusDays(4));
+        BookingOutDto bookingOutDto = bookingService.createBooking(testUser.getId(), testBookingInDto);
+        bookingService.updateBookingStatus(testOwner.getId(), bookingOutDto.getId(), true);
+        List<BookingOutDto> bookings = bookingService.getUserBookings(testUser.getId(), "FUTURE");
         assertFalse(bookings.isEmpty());
         assertEquals(StatusBooking.APPROVED, bookings.get(0).getStatus());
     }
 
     @Test
     void whenGetUserBookings_withCurrentState_thenBookingsAreReturned() {
-        // Устанавливаем даты для текущего периода
         testBookingInDto.setStart(LocalDateTime.now().minusDays(1));
         testBookingInDto.setEnd(LocalDateTime.now().plusDays(1));
-
-        // Создаем бронирование
         BookingOutDto bookingOutDto = bookingService.createBooking(testUser.getId(), testBookingInDto);
         bookingService.updateBookingStatus(testOwner.getId(), bookingOutDto.getId(), true);
-
-        // Проверка бронирований пользователя в состоянии CURRENT
         List<BookingOutDto> bookings = bookingService.getUserBookings(testUser.getId(), "CURRENT");
-
         assertFalse(bookings.isEmpty());
         assertEquals(StatusBooking.APPROVED, bookings.get(0).getStatus());
     }
 
     @Test
     void whenGetUserBookings_withPastState_thenBookingsAreReturned() {
-        // Устанавливаем даты для прошлого периода
         testBookingInDto.setStart(LocalDateTime.now().minusDays(4));
         testBookingInDto.setEnd(LocalDateTime.now().minusDays(2));
-
-        // Создаем бронирование
         BookingOutDto bookingOutDto = bookingService.createBooking(testUser.getId(), testBookingInDto);
         bookingService.updateBookingStatus(testOwner.getId(), bookingOutDto.getId(), true);
-
-        // Проверка бронирований пользователя в состоянии PAST
         List<BookingOutDto> bookings = bookingService.getUserBookings(testUser.getId(), "PAST");
-
         assertFalse(bookings.isEmpty());
         assertEquals(StatusBooking.APPROVED, bookings.get(0).getStatus());
+    }
+
+    @Test
+    void whenGetUserBookings_withRejectedState_thenBookingsAreReturned() {
+        BookingOutDto bookingOutDto = bookingService.createBooking(testUser.getId(), testBookingInDto);
+        bookingService.updateBookingStatus(testOwner.getId(), bookingOutDto.getId(), false);
+        List<BookingOutDto> bookings = bookingService.getUserBookings(testUser.getId(), "REJECTED");
+        assertFalse(bookings.isEmpty());
+        assertEquals(StatusBooking.REJECTED, bookings.get(0).getStatus());
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.shareit.comment.model.Comment;
 import ru.practicum.shareit.comment.repository.CommentRepository;
 import ru.practicum.shareit.exception.NotFoundDataException;
 import ru.practicum.shareit.item.dto.ItemDto;
@@ -15,6 +16,8 @@ import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.item.service.ItemServiceImpl;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
+
+import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -96,5 +99,29 @@ class ItemServiceImplTest {
     void whenGetItemById_withNonExistingItem_thenThrowException() {
         // Ожидаем исключение при попытке получить несуществующий предмет
         assertThrows(RuntimeException.class, () -> itemService.getItemById(999));
+    }
+
+    @Test
+    void whenGetItemWithComments_thenReturnItemWithComments() {
+        // Создаем и сохраняем предмет
+        Item createdItem = itemMapper.toEntity(testItemDto);
+        createdItem.setOwner(testUser);
+        itemRepository.save(createdItem);
+
+        // Создаем и сохраняем комментарий
+        Comment comment = new Comment();
+        comment.setText("Test comment");
+        comment.setItem(createdItem);
+        comment.setAuthor(testUser);
+        comment.setCreated(LocalDateTime.now());
+        commentRepository.save(comment);
+
+        // Получаем предмет с комментариями через сервис
+        ItemDto foundItem = itemService.getItemById(createdItem.getId());
+
+        // Проверяем наличие комментариев
+        assertNotNull(foundItem.getComments());
+        assertEquals(1, foundItem.getComments().size());
+        assertEquals(comment.getText(), foundItem.getComments().get(0).getText());
     }
 }
