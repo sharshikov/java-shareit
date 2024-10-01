@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.request.dto.ItemRequestDto;
 import ru.practicum.shareit.request.model.ItemRequest;
@@ -18,10 +19,12 @@ import ru.practicum.shareit.user.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @Transactional
@@ -45,6 +48,7 @@ public class ItemRequestServiceImplTest {
 
     private ItemRequestDto testItemRequestDto;
     private User testUser;
+    private Item testItem;
 
     @BeforeEach
     void setup() {
@@ -59,6 +63,15 @@ public class ItemRequestServiceImplTest {
         testItemRequestDto.setDescription("Test description");
         testItemRequestDto.setUserId(testUser.getId());
         testItemRequestDto.setCreated(LocalDateTime.now().toString());  // Преобразование времени в строку
+
+        // Создание тестового предмета
+        testItem = new Item();
+        testItem.setName("Test Item");
+        testItem.setDescription("Test Item Description");
+        testItem.setAvailable(true);
+        testItem.setRequest(null); // Без запроса
+        testItem.setOwner(testUser);
+        itemRepository.save(testItem);
     }
 
     @Test
@@ -128,5 +141,33 @@ public class ItemRequestServiceImplTest {
     void whenGetUserRequests_withNonExistingUser_thenThrowException() {
         // Проверка, что возникает исключение при запросе для несуществующего пользователя
         assertThrows(RuntimeException.class, () -> itemRequestService.getUserRequests(999));
+    }
+
+    @Test
+    void whenCreateRequestWithInvalidData_thenThrowException() {
+        // Попытка создать запрос с недопустимыми данными (например, без описания)
+        testItemRequestDto.setDescription(null);
+
+        UserDto testUserDto = userMapper.toDto(testUser);
+
+        // Проверка на выброс исключения
+        assertThrows(RuntimeException.class, () -> itemRequestService.createRequest(testItemRequestDto, testUserDto));
+    }
+
+    @Test
+    void whenDeleteItemRequest_thenRequestIsDeleted() {
+        // Создание и сохранение запроса
+        ItemRequest request = new ItemRequest();
+        request.setDescription("Request to delete");
+        request.setUser(testUser);
+        request.setCreated(LocalDateTime.now());
+        itemRequestRepository.save(request);
+
+        // Удаление запроса
+        itemRequestRepository.deleteById(request.getId());
+
+        // Проверка, что запрос удален
+        Optional<ItemRequest> deletedRequest = itemRequestRepository.findById(request.getId());
+        assertTrue(deletedRequest.isEmpty());
     }
 }
