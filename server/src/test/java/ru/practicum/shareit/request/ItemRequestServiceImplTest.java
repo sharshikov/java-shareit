@@ -170,4 +170,40 @@ public class ItemRequestServiceImplTest {
         Optional<ItemRequest> deletedRequest = itemRequestRepository.findById(request.getId());
         assertTrue(deletedRequest.isEmpty());
     }
+
+    @Test
+    void whenGetRequestById_thenItemsAreReturned() {
+        // Создание и сохранение запроса
+        ItemRequest request = new ItemRequest();
+        request.setDescription("Request with items");
+        request.setUser(testUser);
+        request.setCreated(LocalDateTime.now());
+        itemRequestRepository.save(request);
+
+        // Создание предметов, связанных с запросом
+        Item item1 = new Item();
+        item1.setName("Item 1");
+        item1.setDescription("Description 1");
+        item1.setAvailable(true);
+        item1.setRequest(request.getId());
+        item1.setOwner(testUser);
+        itemRepository.save(item1);
+
+        Item item2 = new Item();
+        item2.setName("Item 2");
+        item2.setDescription("Description 2");
+        item2.setAvailable(true);
+        item2.setRequest(request.getId());
+        item2.setOwner(testUser);
+        itemRepository.save(item2);
+
+        // Получение запроса по ID
+        ItemRequestDto requestDto = itemRequestService.getRequestById(request.getId());
+
+        // Проверка, что запрос возвращает связанные предметы
+        assertNotNull(requestDto.getItems());
+        assertEquals(2, requestDto.getItems().size());
+        assertEquals(item1.getName(), requestDto.getItems().get(0).getName());
+        assertEquals(item2.getName(), requestDto.getItems().get(1).getName());
+    }
 }
