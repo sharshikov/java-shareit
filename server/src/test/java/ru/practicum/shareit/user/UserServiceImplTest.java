@@ -6,10 +6,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.shareit.exception.DuplicateDataException;
+import ru.practicum.shareit.exception.NotFoundDataException;
 import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
-import ru.practicum.shareit.user.service.UserService;
+import ru.practicum.shareit.user.service.UserServiceImpl;
 
 import java.util.Optional;
 
@@ -18,10 +20,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 @Transactional
 @AutoConfigureTestDatabase
-public class UserServiceImplTest {
+class UserServiceImplTest {
 
     @Autowired
-    private UserService userService;
+    private UserServiceImpl userService;
 
     @Autowired
     private UserRepository userRepository;
@@ -29,8 +31,8 @@ public class UserServiceImplTest {
     private UserDto testUserDto;
 
     @BeforeEach
-    void setup() {
-        // Создание DTO для тестового пользователя
+    void setUp() {
+        // Создаем тестового пользователя
         testUserDto = new UserDto();
         testUserDto.setName("Test User");
         testUserDto.setEmail("testuser@example.com");
@@ -38,89 +40,93 @@ public class UserServiceImplTest {
 
     @Test
     void whenCreateUser_thenUserIsCreated() {
-        // Создание пользователя через сервис
-        UserDto savedUser = userService.createUser(testUserDto);
+        // Создаем пользователя
+        UserDto createdUser = userService.createUser(testUserDto);
 
-        // Проверка, что пользователь был успешно создан
-        assertNotNull(savedUser.getId());
-        assertEquals(testUserDto.getName(), savedUser.getName());
-        assertEquals(testUserDto.getEmail(), savedUser.getEmail());
+        // Проверяем, что пользователь был создан
+        assertNotNull(createdUser.getId());
+        assertEquals(testUserDto.getName(), createdUser.getName());
+        assertEquals(testUserDto.getEmail(), createdUser.getEmail());
     }
 
     @Test
-    void whenGetUserById_thenUserIsReturned() {
-        // Создание пользователя через репозиторий
-        User user = new User();
-        user.setName("Test User");
-        user.setEmail("testuser@example.com");
-        userRepository.save(user);
+    void whenCreateUser_withExistingEmail_thenThrowDuplicateDataException() {
+        // Создаем первого пользователя
+        userService.createUser(testUserDto);
 
-        // Получение пользователя через сервис
-        UserDto foundUser = userService.getUserById(user.getId());
+        // Попытка создать второго пользователя с тем же email
+        assertThrows(DuplicateDataException.class, () -> {
+            userService.createUser(testUserDto);
+        });
+    }
 
-        // Проверка, что возвращенный пользователь соответствует сохраненному
+    @Test
+    void whenGetUserById_thenReturnUser() {
+        // Создаем пользователя и сохраняем его
+        UserDto createdUser = userService.createUser(testUserDto);
+
+        // Получаем пользователя по ID
+        UserDto foundUser = userService.getUserById(createdUser.getId());
+
+        // Проверяем, что пользователь был найден и данные совпадают
         assertNotNull(foundUser);
-        assertEquals(user.getId(), foundUser.getId());
-        assertEquals(user.getName(), foundUser.getName());
-        assertEquals(user.getEmail(), foundUser.getEmail());
+        assertEquals(createdUser.getName(), foundUser.getName());
+        assertEquals(createdUser.getEmail(), foundUser.getEmail());
+    }
+
+    @Test
+    void whenGetUserById_withNonExistingUser_thenThrowNotFoundDataException() {
+        // Ожидаем исключение при попытке получить несуществующего пользователя
+        assertThrows(NotFoundDataException.class, () -> userService.getUserById(999));
     }
 
     @Test
     void whenUpdateUser_thenUserIsUpdated() {
-        // Создание и сохранение пользователя
-        User user = new User();
-        user.setName("Old Name");
-        user.setEmail("oldemail@example.com");
-        userRepository.save(user);
+        // Создаем и сохраняем пользователя
+        UserDto createdUser = userService.createUser(testUserDto);
 
-        // DTO для обновления
+        // Обновляем данные пользователя
+        UserDto updatedUserDto = new UserDto();
+        updatedUserDto.setName("Updated User");
+        updatedUserDto.setEmail("updated@example.com");
+        UserDto updatedUser = userService.updateUser(createdUser.getId(), updatedUserDto);
+
+        // Проверяем, что данные были обновлены
+        assertEquals(updatedUserDto.getName(), updatedUser.getName());
+        assertEquals(updatedUserDto.getEmail(), updatedUser.getEmail());
+    }
+
+    @Test
+    void whenUpdateUser_withExistingEmail_thenThrowDuplicateDataException() {
+        // Создаем двух пользователей
+        UserDto firstUser = new UserDto();
+        firstUser.setName("First User");
+        firstUser.setEmail("first@example.com");
+        userService.createUser(firstUser);
+
+        UserDto secondUser = new UserDto();
+        secondUser.setName("Second User");
+        secondUser.setEmail("second@example.com");
+        UserDto secondCreatedUser = userService.createUser(secondUser);
+
+        // Попытка обновить email второго пользователя на email первого пользователя
         UserDto updateUserDto = new UserDto();
-        updateUserDto.setName("Updated Name");
-        updateUserDto.setEmail("updatedemail@example.com");
-
-        // Обновление пользователя через сервис
-        UserDto updatedUser = userService.updateUser(user.getId(), updateUserDto);
-
-        // Проверка, что данные были обновлены
-        assertNotNull(updatedUser);
-        assertEquals("Updated Name", updatedUser.getName());
-        assertEquals("updatedemail@example.com", updatedUser.getEmail());
+        updateUserDto.setEmail("first@example.com");
+        assertThrows(DuplicateDataException.class, () -> {
+            userService.updateUser(secondCreatedUser.getId(), updateUserDto);
+        });
     }
 
     @Test
     void whenDeleteUser_thenUserIsDeleted() {
-        // Создание и сохранение пользователя
-        User user = new User();
-        user.setName("Test User");
-        user.setEmail("testuser@example.com");
-        userRepository.save(user);
+        // Создаем пользователя и сохраняем его
+        UserDto createdUser = userService.createUser(testUserDto);
 
-        // Удаление пользователя через сервис
-        userService.deleteUser(user.getId());
+        // Удаляем пользователя
+        userService.deleteUser(createdUser.getId());
 
-        // Проверка, что пользователь был удален
-        Optional<User> deletedUser = userRepository.findById(user.getId());
-        assertFalse(deletedUser.isPresent());
-    }
-
-    @Test
-    void whenGetAllUsers_thenListOfUsersIsReturned() {
-        // Создание и сохранение пользователей
-        User user1 = new User();
-        user1.setName("User 1");
-        user1.setEmail("user1@example.com");
-
-        User user2 = new User();
-        user2.setName("User 2");
-        user2.setEmail("user2@example.com");
-
-        userRepository.save(user1);
-        userRepository.save(user2);
-
-        // Получение всех пользователей через сервис
-        var users = userService.getAllUsers();
-
-        // Проверка, что список содержит созданных пользователей
-        assertEquals(2, users.size());
+        // Проверяем, что пользователь был удален
+        Optional<User> deletedUser = userRepository.findById(createdUser.getId());
+        assertTrue(deletedUser.isEmpty());
     }
 }

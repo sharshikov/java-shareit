@@ -46,41 +46,4 @@ public class ItemServiceImpl implements ItemService {
         itemDto.setComments(commentRepository.findByItemId(id).stream().map(commentMapper::toDto).toList());
         return itemDto;
     }
-
-    @Override
-    public List<ItemDto> getAllItemsByUserId(Integer userId) {
-        return itemRepository.findAllByOwnerId(userId).stream()
-                .map(itemMapper::toDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public ItemDto updateItem(Integer ownerId, Integer id, ItemDto itemDto) {
-        Item existingItem = itemRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Предмет не найден"));
-        if (!existingItem.getOwner().getId().equals(ownerId))
-            throw new NotFoundDataException("Предмет не найден");
-        if (itemDto.getName() != null)
-            existingItem.setName(itemDto.getName());
-        if (itemDto.getDescription() != null)
-            existingItem.setDescription(itemDto.getDescription());
-        if (itemDto.getAvailable() != null)
-            existingItem.setAvailable(itemDto.getAvailable());
-        return itemMapper.toDto(itemRepository.save(existingItem));
-    }
-
-    @Override
-    public void deleteItem(Integer id) {
-        itemRepository.deleteById(id);
-    }
-
-    @Override
-    public List<ItemDto> searchItems(String text) {
-        if (text.isEmpty()) {
-            return Collections.emptyList();
-        }
-        return itemRepository.search(text).stream().filter(Item::getAvailable)
-                .map(itemMapper::toDto)
-                .collect(Collectors.toList());
-    }
 }

@@ -12,9 +12,6 @@ import ru.practicum.shareit.user.controller.UserController;
 import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.service.UserService;
 
-import java.util.Collections;
-import java.util.List;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.BDDMockito.given;
@@ -48,7 +45,7 @@ class UserControllerTest {
     }
 
     @Test
-    void whenCreateUser_thenReturnCreatedUser() throws Exception {
+    void whenCreateUser_thenReturnCreated() throws Exception {
         given(userService.createUser(any(UserDto.class))).willReturn(userDto);
 
         mockMvc.perform(post("/users")
@@ -61,7 +58,7 @@ class UserControllerTest {
     }
 
     @Test
-    void whenGetUserById_thenReturnUser() throws Exception {
+    void whenGetUserById_thenReturnOk() throws Exception {
         given(userService.getUserById(anyInt())).willReturn(userDto);
 
         mockMvc.perform(get("/users/{id}", 1))
@@ -72,20 +69,7 @@ class UserControllerTest {
     }
 
     @Test
-    void whenGetAllUsers_thenReturnUserList() throws Exception {
-        List<UserDto> userList = Collections.singletonList(userDto);
-        given(userService.getAllUsers()).willReturn(userList);
-
-        mockMvc.perform(get("/users"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()").value(userList.size()))
-                .andExpect(jsonPath("$[0].id").value(userDto.getId()))
-                .andExpect(jsonPath("$[0].name").value(userDto.getName()))
-                .andExpect(jsonPath("$[0].email").value(userDto.getEmail()));
-    }
-
-    @Test
-    void whenUpdateUser_thenReturnUpdatedUser() throws Exception {
+    void whenUpdateUser_thenReturnOk() throws Exception {
         given(userService.updateUser(anyInt(), any(UserDto.class))).willReturn(userDto);
 
         mockMvc.perform(patch("/users/{id}", 1)

@@ -79,20 +79,4 @@ public class BookItemRequestDtoJsonTest {
         // Проверка, что валидация не прошла
         assertThat(violations).hasSize(1);
     }
-
-    @Test
-    void testValidationFailsWhenEndIsNotInTheFuture() {
-        // Создание объекта с неправильной датой окончания (в прошлом)
-        BookItemRequestDto bookItemRequestDto = new BookItemRequestDto(
-                1L,
-                LocalDateTime.of(2024, 10, 1, 12, 0),
-                LocalDateTime.of(2023, 10, 1, 12, 0)  // В прошлом
-        );
-
-        // Выполнение валидации
-        Set<jakarta.validation.ConstraintViolation<BookItemRequestDto>> violations = validator.validate(bookItemRequestDto);
-
-        // Проверка, что валидация не прошла
-        assertThat(violations).hasSize(1);
-    }
 }

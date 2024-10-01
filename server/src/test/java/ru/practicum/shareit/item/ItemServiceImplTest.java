@@ -6,27 +6,27 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.shareit.comment.repository.CommentRepository;
+import ru.practicum.shareit.exception.NotFoundDataException;
 import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.mapper.ItemMapper;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
-import ru.practicum.shareit.item.service.ItemService;
+import ru.practicum.shareit.item.service.ItemServiceImpl;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
-import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
 @Transactional
 @AutoConfigureTestDatabase
-public class ItemServiceImplTest {
+class ItemServiceImplTest {
 
     @Autowired
-    private ItemService itemService;
+    private ItemServiceImpl itemService;
 
     @Autowired
     private ItemRepository itemRepository;
@@ -34,122 +34,67 @@ public class ItemServiceImplTest {
     @Autowired
     private UserRepository userRepository;
 
-    private ItemDto testItemDto;
+    @Autowired
+    private CommentRepository commentRepository;
+
+    @Autowired
+    private ItemMapper itemMapper;
+
     private User testUser;
+    private ItemDto testItemDto;
 
     @BeforeEach
-    void setup() {
-        // Создание тестового пользователя
+    void setUp() {
+        // Создаем тестового пользователя
         testUser = new User();
         testUser.setName("Test User");
         testUser.setEmail("testuser@example.com");
         userRepository.save(testUser);
 
-        // Создание DTO для тестового предмета
+        // Создаем тестовый предмет
         testItemDto = new ItemDto();
         testItemDto.setName("Test Item");
-        testItemDto.setDescription("Test Description");
+        testItemDto.setDescription("Test description");
         testItemDto.setAvailable(true);
     }
 
     @Test
     void whenCreateItem_thenItemIsCreated() {
-        // Создание предмета через сервис
-        ItemDto savedItem = itemService.createItem(testItemDto, testUser.getId());
+        // Создаем предмет через сервис
+        ItemDto createdItem = itemService.createItem(testItemDto, testUser.getId());
 
-        // Проверка, что предмет был успешно создан
-        assertNotNull(savedItem.getId());
-        assertEquals(testItemDto.getName(), savedItem.getName());
-        assertEquals(testItemDto.getDescription(), savedItem.getDescription());
-        assertEquals(testItemDto.getAvailable(), savedItem.getAvailable());
+        // Проверяем, что предмет был создан и все данные корректны
+        assertNotNull(createdItem.getId());
+        assertEquals(testItemDto.getName(), createdItem.getName());
+        assertEquals(testUser.getId(), createdItem.getOwnerId());
     }
 
     @Test
-    void whenGetItemById_thenItemIsReturned() {
-        // Создание предмета через репозиторий
-        Item item = new Item();
-        item.setName("Test Item");
-        item.setDescription("Test Description");
-        item.setAvailable(true);
-        item.setOwner(testUser);
-        itemRepository.save(item);
+    void whenCreateItem_withNonExistingUser_thenThrowNotFoundDataException() {
+        // Ожидаем исключение при создании предмета для несуществующего пользователя
+        assertThrows(NotFoundDataException.class, () -> {
+            itemService.createItem(testItemDto, 999);
+        });
+    }
 
-        // Получение предмета через сервис
-        ItemDto foundItem = itemService.getItemById(item.getId());
+    @Test
+    void whenGetItemById_thenReturnItem() {
+        // Создаем и сохраняем предмет в репозитории
+        Item createdItem = itemMapper.toEntity(testItemDto);
+        createdItem.setOwner(testUser);
+        itemRepository.save(createdItem);
 
-        // Проверка, что возвращенный предмет соответствует сохраненному
+        // Получаем предмет по id через сервис
+        ItemDto foundItem = itemService.getItemById(createdItem.getId());
+
+        // Проверяем, что предмет был успешно найден и данные корректны
         assertNotNull(foundItem);
-        assertEquals(item.getId(), foundItem.getId());
-        assertEquals(item.getName(), foundItem.getName());
-        assertEquals(item.getDescription(), foundItem.getDescription());
+        assertEquals(testItemDto.getName(), foundItem.getName());
     }
 
     @Test
-    void whenUpdateItem_thenItemIsUpdated() {
-        // Создание и сохранение предмета
-        Item item = new Item();
-        item.setName("Old Item Name");
-        item.setDescription("Old Description");
-        item.setAvailable(false);
-        item.setOwner(testUser);
-        itemRepository.save(item);
-
-        // DTO для обновления
-        ItemDto updateItemDto = new ItemDto();
-        updateItemDto.setName("Updated Item Name");
-        updateItemDto.setDescription("Updated Description");
-        updateItemDto.setAvailable(true);
-
-        // Обновление предмета через сервис
-        ItemDto updatedItem = itemService.updateItem(testUser.getId(), item.getId(), updateItemDto);
-
-        // Проверка, что данные были обновлены
-        assertNotNull(updatedItem);
-        assertEquals("Updated Item Name", updatedItem.getName());
-        assertEquals("Updated Description", updatedItem.getDescription());
-        assertTrue(updatedItem.getAvailable());
-    }
-
-    @Test
-    void whenDeleteItem_thenItemIsDeleted() {
-        // Создание и сохранение предмета
-        Item item = new Item();
-        item.setName("Test Item");
-        item.setDescription("Test Description");
-        item.setAvailable(true);
-        item.setOwner(testUser);
-        itemRepository.save(item);
-
-        // Удаление предмета через сервис
-        itemService.deleteItem(item.getId());
-
-        // Проверка, что предмет был удален
-        Optional<Item> deletedItem = itemRepository.findById(item.getId());
-        assertFalse(deletedItem.isPresent());
-    }
-
-    @Test
-    void whenGetAllItemsByUser_thenListOfItemsIsReturned() {
-        // Создание и сохранение предметов
-        Item item1 = new Item();
-        item1.setName("Item 1");
-        item1.setDescription("Description 1");
-        item1.setAvailable(true);
-        item1.setOwner(testUser);
-
-        Item item2 = new Item();
-        item2.setName("Item 2");
-        item2.setDescription("Description 2");
-        item2.setAvailable(true);
-        item2.setOwner(testUser);
-
-        itemRepository.save(item1);
-        itemRepository.save(item2);
-
-        // Получение всех предметов пользователя через сервис
-        var items = itemService.getAllItemsByUserId(testUser.getId());
-
-        // Проверка, что список содержит созданные предметы
-        assertEquals(2, items.size());
+    void whenGetItemById_withNonExistingItem_thenThrowException() {
+        // Ожидаем исключение при попытке получить несуществующий предмет
+        assertThrows(RuntimeException.class, () -> itemService.getItemById(999));
     }
 }

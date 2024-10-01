@@ -40,36 +40,10 @@ public class ItemController {
         return ResponseEntity.ok(itemService.getItemById(id));
     }
 
-    @GetMapping
-    public ResponseEntity<List<ItemDto>> getAllItemsByUserId(@RequestHeader("X-Sharer-User-Id") Integer userId) {
-        return ResponseEntity.ok(itemService.getAllItemsByUserId(userId));
-    }
-
-    @PatchMapping("/{id}")
-    public ResponseEntity<ItemDto> updateItem(@RequestHeader("X-Sharer-User-Id") Integer ownerId, @PathVariable Integer id, @RequestBody ItemDto itemDto) {
-        return ResponseEntity.ok(itemService.updateItem(ownerId, id, itemDto));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteItem(@PathVariable Integer id) {
-        itemService.deleteItem(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/search")
-    public ResponseEntity<List<ItemDto>> searchItems(@RequestParam String text) {
-        return ResponseEntity.ok(itemService.searchItems(text));
-    }
-
     @PostMapping("/{itemId}/comment")
     public ResponseEntity<CommentDto> createComment(@RequestBody CommentDto commentDto,
                                                     @PathVariable Integer itemId,
                                                     @RequestHeader("X-Sharer-User-Id") Integer authorId) {
         return ResponseEntity.ok(commentService.createComment(commentDto, itemId, authorId));
-    }
-
-    @GetMapping("/{itemId}/comments")
-    public ResponseEntity<List<CommentDto>> getCommentsByItemId(@PathVariable Integer itemId) {
-        return ResponseEntity.ok(commentService.getCommentsByItemId(itemId));
     }
 }
