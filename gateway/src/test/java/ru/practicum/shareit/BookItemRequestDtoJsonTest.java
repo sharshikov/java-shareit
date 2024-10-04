@@ -70,7 +70,7 @@ public class BookItemRequestDtoJsonTest {
         BookItemRequestDto bookItemRequestDto = new BookItemRequestDto(
                 1L,
                 LocalDateTime.of(2023, 10, 1, 12, 0),  // В прошлом
-                LocalDateTime.of(2024, 10, 2, 12, 0)
+                LocalDateTime.of(2025, 10, 20, 12, 0)
         );
 
         // Выполнение валидации

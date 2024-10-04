@@ -8,6 +8,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import ru.practicum.shareit.exception.NotFoundDataException;
 import ru.practicum.shareit.user.controller.UserController;
 import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.service.UserService;
@@ -85,5 +86,25 @@ class UserControllerTest {
     void whenDeleteUser_thenReturnNoContent() throws Exception {
         mockMvc.perform(delete("/users/{id}", 1))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void whenGetUserById_withNonExistingId_thenReturnNotFound() throws Exception {
+        given(userService.getUserById(anyInt())).willThrow(new NotFoundDataException("User not found"));
+
+        mockMvc.perform(get("/users/{id}", 999))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("User not found"));
+    }
+
+    @Test
+    void whenUpdateUser_withNonExistingId_thenReturnNotFound() throws Exception {
+        given(userService.updateUser(anyInt(), any(UserDto.class))).willThrow(new NotFoundDataException("User not found"));
+
+        mockMvc.perform(patch("/users/{id}", 999)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userDto)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("User not found"));
     }
 }

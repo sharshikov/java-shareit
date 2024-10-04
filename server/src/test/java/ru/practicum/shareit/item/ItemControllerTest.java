@@ -96,4 +96,19 @@ class ItemControllerTest {
                 .andExpect(jsonPath("$.text").value(commentDto.getText()))
                 .andExpect(jsonPath("$.authorName").value(commentDto.getAuthorName()));
     }
+
+    @Test
+    void whenGetItemByIdWithInvalidId_thenReturnBadRequest() throws Exception {
+        mockMvc.perform(get("/items/{id}", "invalid")) // Некорректный ID (не число)
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void whenCreateItemWithInvalidOwnerId_thenReturnBadRequest() throws Exception {
+        mockMvc.perform(post("/items")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(itemDto))
+                        .header("X-Sharer-User-Id", "invalid")) // Некорректный ownerId (не число)
+                .andExpect(status().isBadRequest());
+    }
 }

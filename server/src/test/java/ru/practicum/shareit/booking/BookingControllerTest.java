@@ -90,6 +90,14 @@ public class BookingControllerTest {
     }
 
     @Test
+    void whenUpdateBookingStatusWithInvalidApprovedParam_thenReturnBadRequest() throws Exception {
+        mockMvc.perform(patch("/bookings/{bookingId}", 1)
+                        .header("X-Sharer-User-Id", "1")
+                        .param("approved", "invalid")) // Некорректный параметр
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void whenGetBookingById_thenReturnBookingOutDto() throws Exception {
         when(bookingService.getBooking(anyInt(), anyInt())).thenReturn(bookingOutDto);
 
@@ -99,6 +107,13 @@ public class BookingControllerTest {
                 .andExpect(jsonPath("$.id").value(bookingOutDto.getId()))
                 .andExpect(jsonPath("$.item.id").value(bookingOutDto.getItem().getId()))
                 .andExpect(jsonPath("$.booker.id").value(bookingOutDto.getBooker().getId()));
+    }
+
+    @Test
+    void whenGetBookingByInvalidId_thenReturnBadRequest() throws Exception {
+        mockMvc.perform(get("/bookings/{bookingId}", "invalidId") // Некорректный ID
+                        .header("X-Sharer-User-Id", "1"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

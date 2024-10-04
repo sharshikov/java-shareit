@@ -102,4 +102,20 @@ class ItemRequestControllerTest {
                 .andExpect(jsonPath("$.id").value(itemRequestDto.getId()))
                 .andExpect(jsonPath("$.description").value(itemRequestDto.getDescription()));
     }
+
+    @Test
+    void whenCreateRequestWithInvalidUserId_thenReturnBadRequest() throws Exception {
+        mockMvc.perform(post("/requests")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(itemRequestDto))
+                        .header("X-Sharer-User-Id", "invalid")) // Некорректный userId (не число)
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void whenGetRequestByIdWithInvalidId_thenReturnBadRequest() throws Exception {
+        mockMvc.perform(get("/requests/{requestId}", "invalid") // Некорректный ID (не число)
+                        .header("X-Sharer-User-Id", 1))
+                .andExpect(status().isBadRequest());
+    }
 }
